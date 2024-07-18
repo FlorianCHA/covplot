@@ -1,11 +1,10 @@
 Package: covplot
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Create Plot for Covid Evolution Analysis
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Florian CHARRIAT
+Maintainer: florian.charriat@gmail.com
+Description: Create a beautiful plot for show SNP evolution in SARS-Cov2 genome
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true

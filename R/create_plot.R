@@ -1,5 +1,3 @@
-library('dplyr')
-
 data.snp.process <- function(path.data, sheet.name, min.depth)
 {
   data <- readxl::read_excel(path.data, sheet = sheet.name)
