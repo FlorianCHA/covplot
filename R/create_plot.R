@@ -24,7 +24,7 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
     mutate(`Amino acid change in longest transcript` = sapply(strsplit(`Amino acid change in longest transcript`, "p."), function(x) x[2]))  # Extract amino acid change
   #    filter(!is.na(`Amino acid change in longest transcript`)) %>%
 
-  # Identifiez les positions des valeurs supérieures à 100 dans chaque colonne
+  # Identifiez les positions ayant moins de 100 de profondeur.
   val_under_100 <- which(coverage < min.depth, arr.ind=T)
   if (length(val_under_100) >0)
   {
@@ -51,6 +51,87 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
   return(data_snp)
 }
 
+make.orf <- function(data, p)
+{
+  xmin <- c()
+  xmax <- c()
+  ymin <- c()
+  ymax <- c()
+  labs <- c()
+  for (i in 1:length(unique(data$Sample)))
+  {
+    i = i-1
+    # Add ORF1ab
+    xmin <- c(xmin, 266-1)
+    xmax <- c(xmax, 21555)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'ORF1ab')
+    # Add S
+    xmin <- c(xmin, 21563-1)
+    xmax <- c(xmax, 25384)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'S')
+    # Add ORF3a
+    xmin <- c(xmin, 25393-1)
+    xmax <- c(xmax, 26220)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'ORF3a')
+    # Add E
+    xmin <- c(xmin, 26245-1)
+    xmax <- c(xmax, 26472)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'E')
+    # Add M
+    xmin <- c(xmin, 26523-1)
+    xmax <- c(xmax, 27191)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'M')
+    # Add ORF6
+    xmin <- c(xmin, 27202-1)
+    xmax <- c(xmax, 27387)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'ORF6')
+    # Add ORF7a
+    xmin <- c(xmin, 27394-1)
+    xmax <- c(xmax, 27759)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'ORF7a')
+    # Add ORF8
+    xmin <- c(xmin, 27894-1)
+    xmax <- c(xmax, 28259)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'ORF8')
+    # Add N
+    xmin <- c(xmin, 28274-1)
+    xmax <- c(xmax, 29533)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'N')
+    # Add ORF10
+    xmin <- c(xmin, 29558-1)
+    xmax <- c(xmax, 29674)
+    ymin <- c(ymin, 0.65+i)
+    ymax <- c(ymax, 1.35+i)
+    labs <- c(labs,'ORF10')
+  }
+
+  rect_df <- data.frame(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax,
+                        labs = labs)
+
+
+  p <- p + geom_rect(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = labs),
+                     alpha = 0.5, data = rect_df, inherit.aes = FALSE)
+
+  return(p)
+}
 
 
 #' Render Covid plot
@@ -60,6 +141,7 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
 #' @param sheet.name The sheet nome of the excel to process
 #' @param min.frequency The min frequency (SNPs with a frequency below the threshold will not be displayed)
 #' @param min.depth The minimum depth, positions with less depth than the threshold will be displayed in white on the plot.
+#' @param min.depth This option allows you to select the items to be displayed, by default the function show all genome. You can choose between 'ORF1ab','S','ORF3a','E','M','ORF6','ORF7a','ORF8','N','ORF10'
 #' @return A beautiful plot
 #' @import ggplot2
 #' @import dplyr
@@ -68,47 +150,59 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
 #' @examples
 #' render.plot(path.data='/path/to/excel', sheet.name='final', min.frequency=10, min.depth=100)
 #' @export
-render.plot <- function(path.data, sheet.name, min.frequency = 0, min.depth = 100)
+render.plot <- function(path.data, sheet.name, min.frequency = 0, min.depth = 100, show='all')
 {
   data <- data.snp.process(path.data, sheet.name, min.depth)
+  file.name <- strsplit(basename(path.data),".",fixed=TRUE)[[1]][1]
   data <- data[data$Frequency>= min.frequency | is.na(data$Frequency),]
   p <- ggplot2::ggplot(data,ggplot2::aes(x=Region, y=Sample, color=Frequency)) + ggplot2::theme_classic() + ggplot2::geom_point()+ ggplot2::scale_color_gradient(na.value = "white", low="grey82", high="black")
 
-  # Add ORF1ab
-  for (i in 1:length(unique(data$Sample)))
-  {
-    # Add ORF1ab
-    i = i-1
-    p <- p+ ggplot2::annotate("rect", xmin=266-1, xmax=21555, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="seagreen4")
-    # Add S
-    p <- p+ ggplot2::annotate("rect", xmin=21563-1, xmax=25384, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="deeppink1")
-    # Add ORF3a
-    p <- p+ ggplot2::annotate("rect", xmin=25393-1, xmax=26220, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="turquoise4")
-    # Add E
-    p <- p+ ggplot2::annotate("rect", xmin=26245-1, xmax=26472, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="palevioletred2")
-    # Add M
-    p <- p+ ggplot2::annotate("rect", xmin=26523-1, xmax=27191, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="lightsalmon2")
-    # Add ORF6
-    p <- p+ ggplot2::annotate("rect", xmin=27202-1, xmax=27387, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="cadetblue3")
-    # Add ORF7a
-    p <- p+ ggplot2::annotate("rect", xmin=27394-1, xmax=27759, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="darkorchid2")
-    # Add ORF8
-    p <- p+ ggplot2::annotate("rect", xmin=27894-1, xmax=28259, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="violetred2")
-    # Add N
-    p <- p+ ggplot2::annotate("rect", xmin=28274-1, xmax=29533, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="yellowgreen")
-    # Add ORF10
-    p <- p+ ggplot2::annotate("rect", xmin=29558-1, xmax=29674, ymin=0.65+i, ymax=1.35+i, alpha=0.5, fill="forestgreen")
+  #Make colored rect for orf in genome
+  p <- make.orf(data,p)
 
-  }
-
-  p <- p + ggplot2::geom_point() + ggplot2::theme(  axis.ticks = ggplot2::element_blank(),
+  p <- p + ggplot2::geom_point() + ggplot2::theme(  axis.ticks = ggplot2::element_blank(),plot.title = ggplot2::element_text(hjust = 0.5,face='bold'),
               axis.title= ggplot2::element_blank(),
-              legend.position="none",
               axis.text.x = ggplot2::element_text(angle=90,size=6,face="bold",vjust = 0.5),
               axis.line.y = ggplot2::element_blank()) + ggplot2::xlim(min(data$Region)-1, 29674+1) +
     ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`)+
     ggplot2::scale_y_discrete(breaks=unique(data$Sample)[gtools::mixedorder(unique(data$Sample))],
-          limits=unique(data$Sample)[gtools::mixedorder(unique(data$Sample))])
+          limits=unique(data$Sample)[gtools::mixedorder(unique(data$Sample))])+
+    ggplot2::scale_fill_manual(breaks=c('ORF1ab','S','ORF3a','E','M','ORF6','ORF7a','ORF8','N','ORF10'),
+                      values=c('seagreen4','deeppink1','turquoise4','palevioletred2','lightsalmon2','cadetblue3','darkorchid2','violetred2','yellowgreen','forestgreen'),
+                      limits=c('ORF1ab','S','ORF3a','E','M','ORF6','ORF7a','ORF8','N','ORF10')) +
+    ggplot2::labs(fill = "")+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file',sep=' '))
+
+  if (show == 'ORF1ab')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(266-1, 21555))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF1ab',sep=' '))}
+  if (show == 'S')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(21563-1, 25384))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on S',sep=' '))}
+  if (show == 'ORF3a')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(25393-1, 26220))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF3',sep=' '))}
+  if (show == 'E')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(26245-1, 26472))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on E',sep=' '))}
+  if (show == 'M')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(26523-1, 27191))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on M',sep=' '))}
+  if (show == 'ORF6')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(27202-1, 27387))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF6',sep=' '))}
+  if (show == 'ORF7a')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(27394-1, 27759))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF7a',sep=' '))}
+  if (show == 'ORF8')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(27894-1, 28259))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF8',sep=' '))}
+  if (show == 'N')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(28274-1, 29533))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on N',sep=' '))}
+  if (show == 'ORF10')
+  { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(29558-1, 29674))+
+    ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF10',sep=' '))}
 
   return(p)
 }
