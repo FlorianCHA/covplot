@@ -4,7 +4,13 @@
 \alias{render.plot}
 \title{Render Covid plot}
 \usage{
-render.plot(path.data, sheet.name, min.frequency = 0, min.depth = 100)
+render.plot(
+  path.data,
+  sheet.name,
+  min.frequency = 0,
+  min.depth = 100,
+  show = "all"
+)
 }
 \arguments{
 \item{path.data}{The path of the excel file to use}
@@ -13,7 +19,7 @@ render.plot(path.data, sheet.name, min.frequency = 0, min.depth = 100)
 
 \item{min.frequency}{The min frequency (SNPs with a frequency below the threshold will not be displayed)}
 
-\item{min.depth}{The minimum depth, positions with less depth than the threshold will be displayed in white on the plot.}
+\item{min.depth}{This option allows you to select the items to be displayed, by default the function show all genome. You can choose between 'ORF1ab','S','ORF3a','E','M','ORF6','ORF7a','ORF8','N','ORF10'}
 }
 \value{
 A beautiful plot
