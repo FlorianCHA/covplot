@@ -21,7 +21,7 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
 
   # Filter data with non-missing amino acid changes
   data_snp <- data_snp %>%
-    mutate(`Amino acid change in longest transcript` = sapply(strsplit(`Amino acid change in longest transcript`, "p."), function(x) x[2]))  # Extract amino acid change
+    mutate(`Amino acid change in longest transcript` = sapply(strsplit(`Amino acid change in longest transcript`, "p.",fixed=TRUE), function(x) x[2]))  # Extract amino acid change
   #    filter(!is.na(`Amino acid change in longest transcript`)) %>%
 
   # Identifiez les positions ayant moins de 100 de profondeur.
