@@ -141,7 +141,7 @@ make.orf <- function(data, p)
 #' @param sheet.name The sheet nome of the excel to process
 #' @param min.frequency The min frequency (SNPs with a frequency below the threshold will not be displayed)
 #' @param min.depth The minimum depth, positions with less depth than the threshold will be displayed in white on the plot.
-#' @param min.depth This option allows you to select the items to be displayed, by default the function show all genome. You can choose between 'ORF1ab', 'S', 'ORF3a', 'E', 'M', 'ORF6', 'ORF7a', 'ORF8', 'N', 'ORF10'
+#' @param show This option allows you to select the items to be displayed, by default the function show all genome. You can choose between 'ORF1ab', 'S', 'ORF3a', 'E', 'M', 'ORF6', 'ORF7a', 'ORF8', 'N', 'ORF10'
 #' @return A beautiful plot
 #' @import ggplot2
 #' @import dplyr
