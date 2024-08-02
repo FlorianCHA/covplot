@@ -2,8 +2,11 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
 {
   data <- readxl::read_excel(path.data, sheet = sheet.name)
   samples <- unique(data$Sample)
-  coverage <- data[samples]
-
+  coverage <- data[order(data$Region, decreasing=TRUE),]
+  coverage <- coverage[!duplicated(coverage$Region),]
+  position_coverage <- coverage$Region
+  coverage <- coverage[samples]
+  rownames(coverage) <- position_coverage
 
   # Retrieve only SNP (Reference != Allele)
   data_snp <- data %>%
@@ -32,7 +35,7 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
     {
       indice.row <- val_under_100[indice,1]
       indice.col <- val_under_100[indice,2]
-      region <- data$Region[indice.row]
+      region <- position_coverage[indice.row]
       sample <- colnames(coverage[indice.col])
       allele <- NA
       frequency <- NA
@@ -43,6 +46,7 @@ data.snp.process <- function(path.data, sheet.name, min.depth)
 
   # Keep only SNV type
   data_snp <- data_snp %>%
+    mutate(Region =  sapply(str_replace(Region,fixed('^'),'..'), function(x) x)) %>%  # Split and convert Region to integer
     mutate(Region =  sapply(strsplit(Region,'..',fixed=TRUE), function(x) as.integer(x[1]))) %>%  # Split and convert Region to integer
     mutate(Sample = sapply(strsplit(Sample,'_'), function(x) x[2])) # Extract sample name
   data_snp$Region <- as.integer(data_snp$Region)
@@ -150,10 +154,13 @@ make.orf <- function(data, p)
 #' @examples
 #' render.plot(path.data='/path/to/excel', sheet.name='final', min.frequency=10, min.depth=100)
 #' @export
-render.plot <- function(path.data, sheet.name, min.frequency = 0, min.depth = 100, show='all')
+render.plot <- function(path.data, sheet.name, path.output.fig, min.frequency = 0, min.depth = 100, show='all')
 {
   data <- data.snp.process(path.data, sheet.name, min.depth)
   file.name <- strsplit(basename(path.data),".",fixed=TRUE)[[1]][1]
+  table.coverage <- as.data.frame(table(data.snp$Region))
+  colnames(table.coverage) <- c('Region','Nb SNP or Missing')
+  write.table(table.coverage,paste(file.name,'.csv',sep=''),row.names=FALSE)
   data <- data[data$Frequency>= min.frequency | is.na(data$Frequency),]
   p <- ggplot2::ggplot(data,ggplot2::aes(x=Region, y=Sample, color=Frequency)) + ggplot2::theme_classic() + ggplot2::geom_point()+ ggplot2::scale_color_gradient(na.value = "white", low="grey82", high="black")
 
@@ -166,7 +173,7 @@ render.plot <- function(path.data, sheet.name, min.frequency = 0, min.depth = 10
               axis.line.y = ggplot2::element_blank()) + ggplot2::xlim(min(data$Region)-1, 29674+1) +
     ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`)+
     ggplot2::scale_y_discrete(breaks=unique(data$Sample)[gtools::mixedorder(unique(data$Sample))],
-          limits=unique(data$Sample)[gtools::mixedorder(unique(data$Sample))])+
+          limits=unique(data$Sample)[gtools::mixedorder(unique(data$Sample),decreasing = TRUE)])+
     ggplot2::scale_fill_manual(breaks=c('ORF1ab','S','ORF3a','E','M','ORF6','ORF7a','ORF8','N','ORF10'),
                       values=c('seagreen4','deeppink1','turquoise4','palevioletred2','lightsalmon2','cadetblue3','darkorchid2','violetred2','yellowgreen','forestgreen'),
                       limits=c('ORF1ab','S','ORF3a','E','M','ORF6','ORF7a','ORF8','N','ORF10')) +
@@ -204,6 +211,83 @@ render.plot <- function(path.data, sheet.name, min.frequency = 0, min.depth = 10
   { p <- p + ggplot2::scale_x_continuous(breaks=data$Region,label=data$`Amino acid change in longest transcript`,limits = c(29558-1, 29674))+
     ggplot2::ggtitle(paste('SNP analysis for the',file.name,'file, focus on ORF10',sep=' '))}
 
+  # Save at pdf format
+  pdf(paste(file.name,'.pdf',sep=''),width=11,height=6)
+  print(p)
+  dev.off()
   return(p)
 }
 
+
+#' Render Heatmap Covid plot
+#'
+#' Create a Covid heatmap for show SNP evolution in genome
+#' @param path.data The path of the excel file to use
+#' @param sheet.name The sheet nome of the excel to process
+#' @param min.depth The minimum depth, positions with less depth than the threshold will be displayed in white on the plot.
+#' @param show This option allows you to select the items to be displayed (acide nucleic (ac) or amino acid (aa)), by default the function show ac information. You can choose between 'ac' and 'aa'
+#' @return A beautiful plot
+#' @import ggplot2
+#' @import dplyr
+#' @import gtools
+#' @import readxl
+#' @examples
+#' render.heatmap(path.data='/path/to/excel', sheet.name='final',  min.depth=100)
+#' @export
+render.heatmap <- function(path.data, sheet.name, min.depth = 100, show='ac')
+{
+  data.snp <- data.snp.process(path.data, sheet.name,min.depth=100)
+  file.name <- strsplit(basename(path.data),".",fixed=TRUE)[[1]][1]
+
+  ggplot(data = data.snp, aes(x=`Amino acid change in longest transcript`, y=Sample, fill=Allele),color='black') +
+    geom_tile(color='black') +
+    scale_y_discrete(breaks=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing=TRUE)],
+                     limits=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing = TRUE)]) +  theme_classic()+
+    theme(axis.ticks = element_blank(),
+          axis.title= element_blank(),
+          axis.text.x = element_text(angle=90,size=6,face="bold",vjust = 0.5))
+
+  region <- as.vector(unique(data.snp[data.snp$`Amino acid change in longest transcript` !='','Region']))$Region
+  region.x.legend <- data.snp[data.snp$`Amino acid change in longest transcript` !='',c('Region','Amino acid change in longest transcript')]
+  region.x.legend <- region.x.legend[order(region.x.legend$Region),]
+  region.x.legend <- region.x.legend[!duplicated(region.x.legend$Region),]
+  data.aa <- data.snp[data.snp$Region %in% region,]
+  matrice.aa <- acast(data.aa, Sample~Region, value.var = 'Frequency', fun.aggregate=sum)
+  data.aa.plot <- setNames(melt(matrice.aa), c('Sample', 'Region', 'Frequency'))
+
+  plot.aa <- ggplot(data = data.aa.plot, aes(x=as.character(Region), y=Sample, fill=Frequency),color='black') +
+    geom_tile(color='black',linewidth=0.5) +
+    scale_y_discrete(breaks=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing=TRUE)],
+                     limits=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing = TRUE)]) +
+    scale_x_discrete(breaks = region.x.legend$Region, label =region.x.legend$`Amino acid change in longest transcript`) +theme_classic()+
+    theme(axis.ticks = element_blank(),
+          axis.title= element_blank(),
+          axis.text.x = element_text(angle=90,size=6,face="bold",vjust = 0.5))+
+    scale_fill_gradient(low = "white", high = "steelblue", na.value = 'grey80')
+
+  matrice.all <- acast(data.snp, Sample~Region, value.var = 'Frequency', fun.aggregate=sum)
+  data.all.plot <- setNames(melt(matrice.all), c('Sample', 'Region', 'Frequency'))
+
+  plot.ac <- ggplot(data = data.aa.plot, aes(x=as.character(Region), y=Sample, fill=Frequency),color='black') +
+    geom_tile(color='black',linewidth=0.5) +
+    scale_y_discrete(breaks=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing=TRUE)],
+                     limits=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing = TRUE)]) +
+    theme(axis.ticks = element_blank(),
+          axis.title= element_blank(),
+          axis.text.x = element_text(angle=90,size=6,face="bold",vjust = 0.5))+
+    scale_fill_gradient(low = "white", high = "steelblue", na.value = 'grey80')
+  if (show == 'ac')
+  {
+    pdf(paste(file.name,'_ac.pdf',sep=''),width=11,height=6)
+    print(plot.ac)
+    dev.off()
+    return(plot.ac)
+  }
+  if (show == 'aa')
+  {
+    pdf(paste(file.name,'_aa.pdf',sep=''),width=11,height=6)
+    print(plot.aa)
+    dev.off()
+    return(plot.aa)
+  }
+}

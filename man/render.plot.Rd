@@ -7,6 +7,7 @@
 render.plot(
   path.data,
   sheet.name,
+  path.output.fig,
   min.frequency = 0,
   min.depth = 100,
   show = "all"
