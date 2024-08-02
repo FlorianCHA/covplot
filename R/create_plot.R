@@ -158,7 +158,7 @@ render.plot <- function(path.data, sheet.name, path.output.fig, min.frequency = 
 {
   data <- data.snp.process(path.data, sheet.name, min.depth)
   file.name <- strsplit(basename(path.data),".",fixed=TRUE)[[1]][1]
-  table.coverage <- as.data.frame(table(data.snp$Region))
+  table.coverage <- as.data.frame(table(data$Region))
   colnames(table.coverage) <- c('Region','Nb SNP or Missing')
   write.table(table.coverage,paste(file.name,'.csv',sep=''),row.names=FALSE)
   data <- data[data$Frequency>= min.frequency | is.na(data$Frequency),]
@@ -229,6 +229,8 @@ render.plot <- function(path.data, sheet.name, path.output.fig, min.frequency = 
 #' @return A beautiful plot
 #' @import ggplot2
 #' @import dplyr
+#' @import reshape2
+#' @import stringr
 #' @import gtools
 #' @import readxl
 #' @examples
@@ -238,14 +240,6 @@ render.heatmap <- function(path.data, sheet.name, min.depth = 100, show='ac')
 {
   data.snp <- data.snp.process(path.data, sheet.name,min.depth=100)
   file.name <- strsplit(basename(path.data),".",fixed=TRUE)[[1]][1]
-
-  ggplot(data = data.snp, aes(x=`Amino acid change in longest transcript`, y=Sample, fill=Allele),color='black') +
-    geom_tile(color='black') +
-    scale_y_discrete(breaks=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing=TRUE)],
-                     limits=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing = TRUE)]) +  theme_classic()+
-    theme(axis.ticks = element_blank(),
-          axis.title= element_blank(),
-          axis.text.x = element_text(angle=90,size=6,face="bold",vjust = 0.5))
 
   region <- as.vector(unique(data.snp[data.snp$`Amino acid change in longest transcript` !='','Region']))$Region
   region.x.legend <- data.snp[data.snp$`Amino acid change in longest transcript` !='',c('Region','Amino acid change in longest transcript')]
@@ -267,11 +261,13 @@ render.heatmap <- function(path.data, sheet.name, min.depth = 100, show='ac')
 
   matrice.all <- acast(data.snp, Sample~Region, value.var = 'Frequency', fun.aggregate=sum)
   data.all.plot <- setNames(melt(matrice.all), c('Sample', 'Region', 'Frequency'))
-
-  plot.ac <- ggplot(data = data.aa.plot, aes(x=as.character(Region), y=Sample, fill=Frequency),color='black') +
+  data.all.plot$Region <- as.character(data.all.plot$Region)
+  plot.ac <- ggplot(data = data.all.plot, aes(x=as.character(Region), y=Sample, fill=Frequency),color='black') +
     geom_tile(color='black',linewidth=0.5) +
     scale_y_discrete(breaks=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing=TRUE)],
                      limits=unique(data.snp$Sample)[mixedorder(unique(data.snp$Sample),decreasing = TRUE)]) +
+    scale_x_discrete(breaks = unique(data.all.plot$Region)[gtools::mixedorder(unique(data.all.plot$Region))],
+                     limits = unique(data.all.plot$Region)[gtools::mixedorder(unique(data.all.plot$Region))]) +theme_classic()+
     theme(axis.ticks = element_blank(),
           axis.title= element_blank(),
           axis.text.x = element_text(angle=90,size=6,face="bold",vjust = 0.5))+
