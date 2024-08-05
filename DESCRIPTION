@@ -12,4 +12,5 @@ Imports:
     dplyr,
     ggplot2,
     gtools,
-    readxl
+    readxl,
+    stringr

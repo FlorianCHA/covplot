@@ -149,6 +149,7 @@ make.orf <- function(data, p)
 #' @return A beautiful plot
 #' @import ggplot2
 #' @import dplyr
+#' @import stringr
 #' @import gtools
 #' @import readxl
 #' @examples
