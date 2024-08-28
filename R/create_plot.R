@@ -261,6 +261,7 @@ render.heatmap <- function(path.data, sheet.name, min.depth = 100, show='ac')
     scale_fill_gradient(low = "white", high = "steelblue", na.value = 'grey80')
 
   matrice.all <- acast(data.snp, Sample~Region, value.var = 'Frequency', fun.aggregate=sum)
+  write.csv(matrice.all, file = paste(file.name,"matrice.csv",sep='_'))
   data.all.plot <- setNames(melt(matrice.all), c('Sample', 'Region', 'Frequency'))
   data.all.plot$Region <- as.character(data.all.plot$Region)
   plot.ac <- ggplot(data = data.all.plot, aes(x=as.character(Region), y=Sample, fill=Frequency),color='black') +
